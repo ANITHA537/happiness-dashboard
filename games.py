@@ -53,10 +53,13 @@ class MiniSudoku:
         # Check if already solved correctly
         if st.session_state.game_completed:
              st.success("🎉 Puzzle Solved! Focus Score: 10/10")
-             return True, 10 # Completed, Score
+             return True, 10, st.session_state.get('sudoku_attempts', 1) # Completed, Score, Attempts
 
         grid = st.session_state.sudoku_board
         
+        if 'sudoku_attempts' not in st.session_state:
+            st.session_state.sudoku_attempts = 0
+
         with st.form("sudoku_form"):
             for i in range(4):
                 cols = st.columns(4)
@@ -77,15 +80,16 @@ class MiniSudoku:
             submitted = st.form_submit_button("Check Solution")
             
             if submitted:
+                st.session_state.sudoku_attempts += 1
                 if user_solution == st.session_state.sudoku_solution:
                     st.session_state.game_completed = True
                     elapsed = time.time() - st.session_state.game_start_time
                     score = max(10 - int(elapsed / 10), 5) # Faster = Higher Score
                     st.success(f"Correct! Time: {elapsed:.1f}s. Mental Focus Score: {score}/10")
-                    return True, score
+                    return True, score, st.session_state.sudoku_attempts
                 else:
                     st.error("Incorrect. Try again!")
-                    return False, 0
+                    return False, 0, st.session_state.sudoku_attempts
         
-        return False, 0
+        return False, 0, st.session_state.sudoku_attempts
 

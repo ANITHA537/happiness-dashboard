@@ -5,3 +5,4 @@ wordcloud
 matplotlib
 st-gsheets-connection
 gspread
+statsmodels

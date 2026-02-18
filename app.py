@@ -54,9 +54,18 @@ def render_activity_page():
     st.markdown("### 🎮 Boost Your Focus")
     with st.expander("Play Mini-Sudoku (Optional)", expanded=False):
         game = MiniSudoku()
-        is_complete, score = game.render_game()
+        is_complete, score, attempts = game.render_game()
+        
+        # Logic: If attempted but not complete, score is 0. If complete, score is calculated.
+        # If not attempted, score is None.
         if is_complete:
             st.session_state['latest_game_score'] = score
+        elif attempts > 0:
+             st.session_state['latest_game_score'] = 0
+        else:
+             # Keep previous state if existing, else None
+             if 'latest_game_score' not in st.session_state:
+                 st.session_state['latest_game_score'] = None
     
     with st.form("happiness_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -78,9 +87,12 @@ def render_activity_page():
             notes = st.text_area("Any other thoughts?", placeholder="Share more details...")
             
         # Display game score if available
-        game_score = st.session_state.get('latest_game_score', 0)
-        if game_score > 0:
-            st.info(f"✨ Including Game Focus Score: {game_score}/10")
+        game_score = st.session_state.get('latest_game_score', None)
+        if game_score is not None:
+            if game_score > 0:
+                st.info(f"✨ Including Game Focus Score: {game_score}/10")
+            elif game_score == 0:
+                st.warning(f"⚠️ Including Game Focus Score: 0/10 (Incorrect Solution)")
             
         submitted = st.form_submit_button("Submit Entry")
         
@@ -93,7 +105,7 @@ def render_activity_page():
                 'Stress Level': stress_score,
                 'Sleep Quality': sleep_score,
                 'Social Connection': social_score,
-                'Game Score': game_score, # Add metric
+                'Game Score': game_score if game_score is not None else None, # Explicitly handle None
                 'Factors': ", ".join(factors),
                 'Gratitude': gratitude,
                 'Notes': notes
@@ -102,6 +114,15 @@ def render_activity_page():
             # Save data
             save_entry(DATA_FILE, entry)
             st.cache_data.clear()
+            
+            # Reset Game State
+            if 'sudoku_attempts' in st.session_state:
+                del st.session_state['sudoku_attempts']
+            if 'latest_game_score' in st.session_state:
+                del st.session_state['latest_game_score']
+            if 'sudoku_board' in st.session_state: # Reset board for new game
+                del st.session_state['sudoku_board']
+                
             st.success("Thank you! Your activity has been recorded.")
             st.balloons()
 
@@ -240,7 +261,7 @@ def render_dashboard_page():
     with col_game:
         st.markdown("##### 🧠 Cognitive Insights")
         if 'Game Score' in df.columns and df['Game Score'].notnull().any():
-            valid_scores = df[df['Game Score'] > 0]
+            valid_scores = df[df['Game Score'].notnull()] # Include 0s, exclude NaNs
             if not valid_scores.empty:
                 avg_focus = valid_scores['Game Score'].mean()
                 
